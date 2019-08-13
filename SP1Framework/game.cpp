@@ -3,6 +3,7 @@
 //
 #include "game.h"
 #include "Framework\console.h"
+#include "levels.h"
 #include <iostream>
 #include <iomanip>
 #include <sstream>
@@ -14,6 +15,7 @@ bool    g_abKeyPressed[K_COUNT];
 // Game specific variables here
 SGameChar   g_sChar;
 EGAMESTATES g_eGameState = S_SPLASHSCREEN;
+EMENU		g_eMenuState = S_NEW;
 double  g_dBounceTime; // this is to prevent key bouncing, so we won't trigger keypresses more than once
 
 // Console object
@@ -103,9 +105,11 @@ void update(double dt)
     {
         case S_SPLASHSCREEN : splashScreenWait(); // game logic for the splash screen
             break;
+		case S_MENU: processUserInput(); // game logic for menu screen
+			break;
         case S_GAME: gameplay(); // gameplay logic when we are in the game
             break;
-		case S_PAUSE: processUserInput();
+		case S_PAUSE: processUserInput(); // game logic for pause screen
 			break;
     }
 }
@@ -124,6 +128,8 @@ void render()
     {
         case S_SPLASHSCREEN: renderSplashScreen();
             break;
+		case S_MENU: renderMenu();
+			break;
         case S_GAME: renderGame();
             break;
 		case S_PAUSE: renderPauseScreen();
@@ -136,7 +142,7 @@ void render()
 void splashScreenWait()    // waits for time to pass in splash screen
 {
     if (g_dElapsedTime > 3.0) // wait for 3 seconds to switch to game mode, else do nothing
-        g_eGameState = S_GAME;
+        g_eGameState = S_MENU;
 }
 
 void gameplay()            // gameplay logic
@@ -151,8 +157,6 @@ void moveCharacter()
     bool bSomethingHappened = false;
     if (g_dBounceTime > g_dElapsedTime)
         return;
-	switch (g_eGameState) {
-	case S_GAME:
     // Updating the location of the character based on the key press
     // providing a beep sound whenver we shift the character
     if (g_abKeyPressed[K_UP] && g_sChar.m_cLocation.Y > 1)
@@ -184,9 +188,6 @@ void moveCharacter()
         g_sChar.m_bActive = !g_sChar.m_bActive;
         bSomethingHappened = true;
     }
-	break;
-	}
-
     if (bSomethingHappened)
     {
         // set the bounce time to some time in the future to prevent accidental triggers
@@ -195,6 +196,24 @@ void moveCharacter()
 }
 void processUserInput()
 {
+	bool bSomethingHappened = false;
+	if (g_dBounceTime > g_dElapsedTime)
+		return;
+	// Changes menu state accordingly
+	if (g_abKeyPressed[K_DOWN] && g_eGameState == S_MENU) // press down for continue game state
+		g_eMenuState = S_CONTINUE;
+	if (g_abKeyPressed[K_UP] && g_eGameState == S_MENU) // press up for New game state
+		g_eMenuState = S_NEW;
+	// Load or start new game according to state
+	if (g_abKeyPressed[K_SPACE]) {
+		switch (g_eMenuState) {
+		case S_NEW: g_eGameState = S_GAME;
+			break;
+		case S_CONTINUE: loadFile();
+			g_eGameState = S_GAME;
+			break;
+		}
+	}
 	// pauses/unpauses the game if player hits the F1 key
 	if (g_abKeyPressed[K_F1] & g_eGameState == S_PAUSE)
 		g_eGameState = S_GAME;
@@ -202,7 +221,13 @@ void processUserInput()
 		g_eGameState = S_PAUSE;
     // quits the game if player hits the escape key
     else if (g_abKeyPressed[K_ESCAPE])
-        g_bQuitGame = true;    
+        g_bQuitGame = true;
+	
+	if (bSomethingHappened)
+	{
+		// set the bounce time to some time in the future to prevent accidental triggers
+		g_dBounceTime = g_dElapsedTime + 0.25; // 250ms should be enough
+	}
 }
 
 void clearScreen()
@@ -238,14 +263,13 @@ void renderMap()
         0x1A, 0x2B, 0x3C, 0x4D, 0x5E, 0x6F,
         0xA1, 0xB2, 0xC3, 0xD4, 0xE5, 0xF6
     };
-
     COORD c;
 	// Render frames for game, inventory, etc.
 	c.Y = 1;
 	for (int y = 0; y <= 10; y++, c.Y++) {
 		c.X = 2;
-		for (int x = 0; x <= 33; x++, c.X++) {
-			g_Console.writeToBuffer(c, " ", 0x02);
+		for (int x = 0; x <= 30; x++, c.X++) {
+				g_Console.writeToBuffer(c, " ", 0x02);
 		}
 	}
 }
@@ -258,7 +282,7 @@ void renderCharacter()
     {
         charColor = 0x0A;
     }
-    g_Console.writeToBuffer(g_sChar.m_cLocation, (char)2, charColor);
+    g_Console.writeToBuffer(g_sChar.m_cLocation, (char)3, charColor);
 }
 
 void renderFramerate()
@@ -284,7 +308,7 @@ void renderToScreen()
     // Writes the buffer to the console, hence you will see what you have written
     g_Console.flushBufferToConsole();
 }
-void renderPauseScreen() 
+void renderPauseScreen() // Renders pause screen
 {
 	COORD c = g_Console.getConsoleSize();
 	c.Y = 4;
@@ -293,4 +317,18 @@ void renderPauseScreen()
 	c.Y++;
 	c.X = 4;
 	g_Console.writeToBuffer(c, "Press F1 to contiue", 0x03);
+}
+void renderMenu() // Renders Menu
+{
+	COORD c = g_Console.getConsoleSize();
+	c.Y = 4;
+	c.X = 6;
+	g_Console.writeToBuffer(c, "Welcome to ", 0x0A);
+	c.Y += 2;
+	g_Console.writeToBuffer(c, "New Game", 0x0A);
+	c.Y++;
+	g_Console.writeToBuffer(c, "Continue", 0x0A);
+	c.Y = 6 + g_eMenuState;
+	c.X = 5;
+	g_Console.writeToBuffer(c, ">", 0x0A);
 }

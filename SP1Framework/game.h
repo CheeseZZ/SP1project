@@ -23,11 +23,19 @@ enum EKEYS
 enum EGAMESTATES
 {
     S_SPLASHSCREEN,
+	S_MENU,
+	S_SUBMENU,
     S_GAME,
     S_COUNT,
 	S_PAUSE
 };
 
+// Enumeration for different Menu choices
+enum EMENU
+{
+	S_NEW,
+	S_CONTINUE
+};
 // struct for the game character
 struct SGameChar
 {
@@ -50,8 +58,11 @@ void renderSplashScreen();  // renders the splash screen
 void renderGame();          // renders the game stuff
 void renderMap();           // renders the map to the buffer first
 void renderCharacter();     // renders the character into the buffer
+void renderPauseScreen();	// renders the pause screen
+void renderMenu();			// renders the pre-game Menu
 void renderFramerate();     // renders debug information, frame rate, elapsed time, etc
 void renderToScreen();      // dump the contents of the buffer to the screen, one frame worth of game
-void renderPauseScreen();
+void saveFile();			// saves game into savefile
+void loadFile();			// loads savefile into game.
 
 #endif // _GAME_H
