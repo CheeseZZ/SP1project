@@ -36,6 +36,13 @@ enum EMENU
 	S_NEW,
 	S_CONTINUE
 };
+
+enum GMAP
+{
+	M_LEVEL1,
+	M_LEVEL2,
+	M_LEVEL3
+};
 // struct for the game character
 struct SGameChar
 {
@@ -60,6 +67,7 @@ void renderMap();           // renders the map to the buffer first
 void renderCharacter();     // renders the character into the buffer
 void renderPauseScreen();	// renders the pause screen
 void renderMenu();			// renders the pre-game Menu
+void renderStats();			// renders player statistics
 void renderFramerate();     // renders debug information, frame rate, elapsed time, etc
 void renderToScreen();      // dump the contents of the buffer to the screen, one frame worth of game
 void saveFile();			// saves game into savefile

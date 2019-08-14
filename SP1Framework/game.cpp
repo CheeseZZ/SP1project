@@ -19,7 +19,7 @@ EMENU		g_eMenuState = S_NEW;
 double  g_dBounceTime; // this is to prevent key bouncing, so we won't trigger keypresses more than once
 
 // Console object
-Console g_Console(80, 25, "SP1 Framework");
+Console g_Console(90, 35, "SP1 Framework");
 
 //--------------------------------------------------------------
 // Purpose  : Initialisation function
@@ -37,8 +37,8 @@ void init( void )
     // sets the initial state for the game
     g_eGameState = S_SPLASHSCREEN;
 
-    g_sChar.m_cLocation.X = g_Console.getConsoleSize().X / 5;
-    g_sChar.m_cLocation.Y = g_Console.getConsoleSize().Y / 5;
+    g_sChar.m_cLocation.X = 2;
+    g_sChar.m_cLocation.Y = 1;
     g_sChar.m_bActive = true;
     // sets the width, height and the font name to use in the console
     g_Console.setConsoleFont(0, 16, L"Consolas");
@@ -162,25 +162,25 @@ void moveCharacter()
     if (g_abKeyPressed[K_UP] && g_sChar.m_cLocation.Y > 1)
     {
         Beep(1440, 30);
-        g_sChar.m_cLocation.Y--;
+        g_sChar.m_cLocation.Y -= 2;
         bSomethingHappened = true;
     }
     if (g_abKeyPressed[K_LEFT] && g_sChar.m_cLocation.X > 2)
     {
         //Beep(1440, 30);
-        g_sChar.m_cLocation.X--;
+        g_sChar.m_cLocation.X -= 2;
         bSomethingHappened = true;
     }
-    if (g_abKeyPressed[K_DOWN] && g_sChar.m_cLocation.Y < 11)
+    if (g_abKeyPressed[K_DOWN] && g_sChar.m_cLocation.Y < 19)
     {
         //Beep(1440, 30);
-        g_sChar.m_cLocation.Y++;
+        g_sChar.m_cLocation.Y += 2;
         bSomethingHappened = true;
     }
-    if (g_abKeyPressed[K_RIGHT] && g_sChar.m_cLocation.X < 35)
+    if (g_abKeyPressed[K_RIGHT] && g_sChar.m_cLocation.X < 60)
     {
         //Beep(1440, 30);
-        g_sChar.m_cLocation.X++;
+        g_sChar.m_cLocation.X += 2;
         bSomethingHappened = true;
     }
     if (g_abKeyPressed[K_SPACE])
@@ -252,6 +252,7 @@ void renderSplashScreen()  // renders the splash screen
 
 void renderGame()
 {
+	renderStats();		// renders statistics to screen
     renderMap();        // renders the map to the buffer first
     renderCharacter();  // renders the character into the buffer
 }
@@ -264,25 +265,95 @@ void renderMap()
         0xA1, 0xB2, 0xC3, 0xD4, 0xE5, 0xF6
     };
     COORD c;
-	// Render frames for game, inventory, etc.
+	COORD player;
+	player.X = (g_sChar.m_cLocation.X / 2) - 1;
+	player.Y = (g_sChar.m_cLocation.Y / 2);
 	c.Y = 1;
-	for (int y = 0; y <= 10; y++, c.Y++) {
+	// Render frames for game, inventory, etc.
+	for (int y = 0; y < 10; y++, c.Y+= 2) {
 		c.X = 2;
-		for (int x = 0; x <= 30; x++, c.X++) {
-				g_Console.writeToBuffer(c, " ", 0x02);
+		for (int x = 0; x < 30; x++, c.X+= 2) {
+			if (((x == player.X) && (y == player.Y)) || ((x == player.X) && (y == player.Y - 1 || y == player.Y + 1)) || ((y == player.Y) && (x == player.X - 1 || x == player.X + 1)) || aLevelProgress[y][x]) {
+				aLevelProgress[y][x] = 1;
+				// for loop to scale map size by 2
+				for (int i = 0; i < 4; i++) {
+					// switch to ensure smooth scaling
+					switch (i) {
+					case 0:
+						break;
+					case 1:
+						c.X++;
+						break;
+					case 2:
+						c.Y++;
+						break;
+					case 3:
+						c.X--;
+						break;
+					}
+					switch (aLevel1[y][x]) {
+					case 0: // empty tile
+						g_Console.writeToBuffer(c, " ", 0xFF);
+						break;
+					case 1: // wall
+						g_Console.writeToBuffer(c, " ", 0x00);
+						break;
+					case 2: // enemy
+						g_Console.writeToBuffer(c, " ", 0xE0);
+						break;
+					case 3: // chests
+						g_Console.writeToBuffer(c, " ", 0xAA);
+						break;
+					case 4: // shop
+						g_Console.writeToBuffer(c, " ", 0xBB);
+						break;
+					case 5: // final
+						g_Console.writeToBuffer(c, " ", 0xD0);
+						break;
+					default:
+						g_Console.writeToBuffer(c, " ", 0x00);
+						break;
+					}
+				}
+			}
+			else
+				continue;
+			c.Y--;
 		}
 	}
 }
 
 void renderCharacter()
 {
+	// value of character
+	char charImage = 218;
     // Draw the location of the character
     WORD charColor = 0x0C;
     if (g_sChar.m_bActive)
     {
         charColor = 0x0A;
     }
-    g_Console.writeToBuffer(g_sChar.m_cLocation, (char)3, charColor);
+	// loop to scale the character size by 2
+	for (int i = 0;i < 4;i++) {
+		switch (i) {
+		case 0:
+			break;
+		case 1:
+			g_sChar.m_cLocation.X++;
+			charImage = 191;
+			break;
+		case 2:
+			g_sChar.m_cLocation.Y++;
+			charImage = 217;
+			break;
+		case 3:
+			g_sChar.m_cLocation.X--;
+			charImage = 192;
+			break;
+		}
+		g_Console.writeToBuffer(g_sChar.m_cLocation, charImage, charColor);
+	}
+	g_sChar.m_cLocation.Y--;
 }
 
 void renderFramerate()
@@ -331,4 +402,29 @@ void renderMenu() // Renders Menu
 	c.Y = 6 + g_eMenuState;
 	c.X = 5;
 	g_Console.writeToBuffer(c, ">", 0x0A);
+}
+void renderStats()
+{	//display health
+	COORD c;
+	std::ostringstream ss;
+	ss << std::fixed << std::setprecision(3);
+	int health = 3;
+	ss.str("");
+	ss << "Life: ";
+	for (int i = 0;i<health;i++)
+	{
+		ss << (char)3;
+	}
+	c.X = 2;
+	c.Y = 22;
+	g_Console.writeToBuffer(c, ss.str(), 0x59);
+
+	//display cash
+	int money = 5;
+	ss.str("");
+	ss << "Cash: " << money;
+	c.X = 2;
+	c.Y = 23;
+	g_Console.writeToBuffer(c, ss.str(), 0x59);
+
 }
